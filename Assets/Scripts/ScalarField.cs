@@ -3,7 +3,8 @@ using System;
 
 public class ScalarField : MonoBehaviour
 {
-    // Unit length of the field
+    // Unit length of the field - it shouldn't mean this anymore
+    [Tooltip("Unit length of each virtual cube")]
     public float gridScale;
     public float GridScale { get => gridScale; }
 
@@ -18,7 +19,9 @@ public class ScalarField : MonoBehaviour
     public ScalarFieldData scalarFieldData;
     private Noise noise;
 
-    public int Resolution { get => scalarFieldData.resolution; }
+    public int Length { get => scalarFieldData.length; }
+    public int Height { get => scalarFieldData.height; }
+    public int Width { get => scalarFieldData.width; }
 
     // To notify observers of grid value or surface level changes.
     event Action<ScalarField> Notify;
@@ -38,7 +41,7 @@ public class ScalarField : MonoBehaviour
     }
 
 
-    public void GenerateValues(int resolution, float gridScale, float value = -1)
+    public void GenerateValues(float gridScale, float value = -1)
     {
         if (noise == null)
         {
@@ -47,16 +50,19 @@ public class ScalarField : MonoBehaviour
 
         noise.NoiseScale = noiseScale;
 
-        scalarFieldData.resolution = resolution;
+        //scalarFieldData.resolution = resolution;
+        int height = scalarFieldData.height;
+        int length = scalarFieldData.length;
+        int width = scalarFieldData.width;
         this.gridScale = gridScale;
 
-        scalarFieldData.values = new float[resolution * resolution * resolution];
+        scalarFieldData.values = new float[height * width * length];
         // fill in values
-        for (int x = 0; x < resolution; x++)
+        for (int x = 0; x < length; x++)
         {
-            for (int y = 0; y < resolution; y++)
+            for (int y = 0; y < height; y++)
             {
-                for (int z = 0; z < resolution; z++)
+                for (int z = 0; z < width; z++)
                 {
                     scalarFieldData.values[ToArrayIndex(x, y, z)] = value == -1 ? noise.GetValue(x, y, z) : value;
                 }
@@ -69,8 +75,8 @@ public class ScalarField : MonoBehaviour
 
     public int ToArrayIndex(int x, int y, int z, int s = -1)
     {
-        if (s == -1) s = scalarFieldData.resolution;
-        return s * s * z + (s * y + x);
+        //if (s == -1) s = scalarFieldData.resolution;
+        return scalarFieldData.height * scalarFieldData.length * z + (scalarFieldData.length * y + x);
     }
 
     public int ToArrayIndex(Vector3 pos)

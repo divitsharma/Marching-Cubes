@@ -36,11 +36,11 @@ public class FieldGizmoRenderer : MonoBehaviour
             return;
         }
 
-        for (int x = 0; x < scalarField.Resolution; x++)
+        for (int x = 0; x < scalarField.Length; x++)
         {
-            for (int y = 0; y < scalarField.Resolution; y++)
+            for (int y = 0; y < scalarField.Height; y++)
             {
-                for (int z = 0; z < scalarField.Resolution; z++)
+                for (int z = 0; z < scalarField.Width; z++)
                 {
                     // so annoyyyyingnnng
                     FieldValueGizmo gizmo = gizmos[s.ToArrayIndex(x, y, z)].GetComponent<FieldValueGizmo>();
@@ -69,12 +69,12 @@ public class FieldGizmoRenderer : MonoBehaviour
         gizmos.RemoveRange(0, gizmos.Count);
 
 
-        float gizmoDrawScale = scalarField.GridScale / (scalarField.Resolution - 1);
-        for (int x = 0; x < scalarField.Resolution; x++)
+        float gizmoDrawScale = scalarField.GridScale;
+        for (int x = 0; x < scalarField.Length; x++)
         {
-            for (int y = 0; y < scalarField.Resolution; y++)
+            for (int y = 0; y < scalarField.Height; y++)
             {
-                for (int z = 0; z < scalarField.Resolution; z++)
+                for (int z = 0; z < scalarField.Width; z++)
                 {
                     float value = scalarField.ValueAt(new Vector3(x,y,z));
                     // Instantiate gizmo
@@ -101,18 +101,18 @@ public class FieldGizmoRenderer : MonoBehaviour
         }
         gizmos.RemoveRange(0, gizmos.Count);
 
-        scalarField.GenerateValues(scalarField.Resolution, scalarField.gridScale);
+        scalarField.GenerateValues(scalarField.gridScale);
 
     }
 
     public void PrintValues()
     {
-        for (int z = 0; z < scalarField.Resolution; z++)
+        for (int z = 0; z < scalarField.Width; z++)
         {
             string s = "";
-            for (int y = 0; y < scalarField.Resolution; y++)
+            for (int y = 0; y < scalarField.Height; y++)
             {
-                for (int x = 0; x < scalarField.Resolution; x++)
+                for (int x = 0; x < scalarField.Length; x++)
                 {
                     s += scalarField.ValueAt(new Vector3(x, y, z)) + " ";
                 }

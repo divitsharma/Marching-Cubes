@@ -6,13 +6,7 @@ using UnityEngine;
 
 public class MarchingCubesRenderer : MonoBehaviour
 {
-    // Points ABOVE surface level are INSIDE of a shape.
-    //[Tooltip("Point above the surface level are inside of a shape")]
-    //[Range(0f, 1f)]
-    //public float surfaceLevel;
-
-    float gizmoRadius = 0.1f;
-    float gizmoDrawScale;
+    //float gizmoDrawScale = 1;
     bool[,,] selected;
 
     ScalarField scalarField;
@@ -42,9 +36,8 @@ public class MarchingCubesRenderer : MonoBehaviour
         if (scalarField != null)
         {
             scalarField.AddObserver(MarchCubes);
-            gizmoRadius = scalarField.gridScale / (scalarField.Resolution * 8);
             // -1 to represent number of cubes
-            gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
+            //gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
         }
     }
 
@@ -59,12 +52,14 @@ public class MarchingCubesRenderer : MonoBehaviour
         List<int> triangles = new List<int>();
 
         // loop through the "index-3" position of each cube
-        int nCubes = scalarField.Resolution - 1;
-        for (int y = 0; y < nCubes; y++)
+        int nCubesX = scalarField.Length - 1;
+        int nCubesY = scalarField.Height - 1;
+        int nCubesZ = scalarField.Width - 1;
+        for (int y = 0; y < nCubesY; y++)
         {
-            for (int z = 0; z < nCubes; z++)
+            for (int z = 0; z < nCubesZ; z++)
             {
-                for (int x = 0; x < nCubes; x++)
+                for (int x = 0; x < nCubesX; x++)
                 {
                     Vector3 vtx000 = new Vector3(x, y, z);
 
@@ -81,7 +76,7 @@ public class MarchingCubesRenderer : MonoBehaviour
         if (meshfilter.sharedMesh == null)
             meshfilter.sharedMesh = new Mesh();
         meshfilter.sharedMesh.Clear();
-        meshfilter.sharedMesh.vertices = vertices.Select(x => x * gizmoDrawScale).ToArray();
+        meshfilter.sharedMesh.vertices = vertices.Select(x => x * scalarField.GridScale).ToArray();
         meshfilter.sharedMesh.triangles = triangles.ToArray();
         meshfilter.sharedMesh.RecalculateNormals();
     }

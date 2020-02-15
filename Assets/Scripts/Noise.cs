@@ -14,7 +14,7 @@ public class Noise
 
     public Noise(int seed = 1234, int period = 0)
     {
-        gradientNoise = (new GradientNoise(seed) + new ValueNoise(seed));
+        gradientNoise = 0.5f * (new GradientNoise(seed) + new ValueNoise(seed));
         //gradientNoise.Period = period;
     }
 
