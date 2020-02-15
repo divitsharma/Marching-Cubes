@@ -3,21 +3,50 @@ using System;
 
 public class ScalarField : MonoBehaviour
 {
-    //public int resolution = 0;
     // Unit length of the field
     public float gridScale;
-
-    public ScalarFieldData scalarFieldData;
-
-    //float[] values;
-    //public float[] Values { get => values; }
-    public int Resolution { get => scalarFieldData.resolution; }
     public float GridScale { get => gridScale; }
 
+    [Tooltip("Point above the surface level are inside of a shape")]
+    [Range(0f,1f)] [SerializeField] float surfaceLevel;
+
+    [Header("Noise Variables")]
+    public int period;
+    public float noiseScale;
+
+    // The scriptable object
+    public ScalarFieldData scalarFieldData;
+    private Noise noise;
+
+    public int Resolution { get => scalarFieldData.resolution; }
+
+    // To notify observers of grid value or surface level changes.
     event Action<ScalarField> Notify;
+
+
+    // To handle surfaceLevel slider changes.
+    public void OnValidate()
+    {
+        Notify(this);
+    }
+
+
+    private void Start()
+    {
+        noise = new Noise(period: period);
+        noise.NoiseScale = noiseScale;
+    }
+
 
     public void GenerateValues(int resolution, float gridScale, float value = -1)
     {
+        if (noise == null)
+        {
+            noise = new Noise(period: period);
+        }
+
+        noise.NoiseScale = noiseScale;
+
         scalarFieldData.resolution = resolution;
         this.gridScale = gridScale;
 
@@ -29,12 +58,14 @@ public class ScalarField : MonoBehaviour
             {
                 for (int z = 0; z < resolution; z++)
                 {
-                    scalarFieldData.values[ToArrayIndex(x, y, z)] = value == -1 ? UnityEngine.Random.Range(0f,1f) : value;
+                    scalarFieldData.values[ToArrayIndex(x, y, z)] = value == -1 ? noise.GetValue(x, y, z) : value;
                 }
             }
         }
 
+        Notify(this);
     }
+
 
     public int ToArrayIndex(int x, int y, int z, int s = -1)
     {
@@ -47,9 +78,14 @@ public class ScalarField : MonoBehaviour
         return ToArrayIndex((int)pos.x, (int)pos.y, (int)pos.z);
     }
 
+    public float ValueAt(int x, int y, int z)
+    {
+        return scalarFieldData.values[ToArrayIndex(x, y, z)];
+    }
+
     public float ValueAt(Vector3 pos)
     {
-        return scalarFieldData.values[ToArrayIndex(pos)];
+        return ValueAt((int)pos.x, (int)pos.y, (int)pos.z);
     }
 
     public void SetValue(Vector3 pos, float value)
@@ -63,6 +99,11 @@ public class ScalarField : MonoBehaviour
             Debug.Log("Notifying observers");
             Notify(this);
         }
+    }
+
+    public float GetSurfaceLevel()
+    {
+        return surfaceLevel;
     }
 
     public void AddObserver(Action<ScalarField> a)

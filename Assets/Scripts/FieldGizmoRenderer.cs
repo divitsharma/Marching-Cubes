@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
+
 public class FieldGizmoRenderer : MonoBehaviour
 {
 
@@ -12,13 +13,51 @@ public class FieldGizmoRenderer : MonoBehaviour
     public GameObject gizmoPrefab;
     List<GameObject> gizmos = new List<GameObject>();
 
+    private void Start()
+    {
+        scalarField.AddObserver(UpdateGizmos);
+    }
+
+    // Don't do everything in edit mode!
     private void OnValidate()
     {
         if (scalarField == null)
             scalarField = GameObject.FindObjectOfType<ScalarField>();
 
-        scalarField.RemoveObserver(RenderGizmos);
+        scalarField.AddObserver(UpdateGizmos);
     }
+
+
+    void UpdateGizmos(ScalarField s)
+    {
+        if (gizmos == null || gizmos.Count == 0)
+        {
+            Debug.LogError("Gizmos list doesn't exist");
+            return;
+        }
+
+        for (int x = 0; x < scalarField.Resolution; x++)
+        {
+            for (int y = 0; y < scalarField.Resolution; y++)
+            {
+                for (int z = 0; z < scalarField.Resolution; z++)
+                {
+                    // so annoyyyyingnnng
+                    FieldValueGizmo gizmo = gizmos[s.ToArrayIndex(x, y, z)].GetComponent<FieldValueGizmo>();
+                    gizmo.SetValue(s.ValueAt(x, y, z));
+                    if (hideUnderValued && s.ValueAt(x,y,z) <= s.GetSurfaceLevel())
+                    {
+                        gizmo.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        gizmo.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+    }
+
 
     public void RenderGizmos(ScalarField s)
     {
@@ -27,6 +66,8 @@ public class FieldGizmoRenderer : MonoBehaviour
         {
             DestroyImmediate(go);
         }
+        gizmos.RemoveRange(0, gizmos.Count);
+
 
         float gizmoDrawScale = scalarField.GridScale / (scalarField.Resolution - 1);
         for (int x = 0; x < scalarField.Resolution; x++)
@@ -36,13 +77,16 @@ public class FieldGizmoRenderer : MonoBehaviour
                 for (int z = 0; z < scalarField.Resolution; z++)
                 {
                     float value = scalarField.ValueAt(new Vector3(x,y,z));
-                    if (!hideUnderValued || value > 0.703f)
+                    // Instantiate gizmo
+                    GameObject inst = Instantiate(gizmoPrefab, new Vector3(x, y, z) * gizmoDrawScale, Quaternion.identity, transform);
+                    inst.GetComponent<FieldValueGizmo>().SetPoint(new Vector3(x, y, z));
+                    inst.GetComponent<FieldValueGizmo>().SetValue(value);
+                    inst.transform.localScale = Vector3.one * 0.05f;
+                    gizmos.Add(inst);
+                    // Hide if neeeded
+                    if (hideUnderValued && value <= scalarField.GetSurfaceLevel())
                     {
-                        GameObject inst = Instantiate(gizmoPrefab, new Vector3(x, y, z) * gizmoDrawScale, Quaternion.identity, transform);
-                        inst.GetComponent<FieldValueGizmo>().SetPoint(new Vector3(x, y, z));
-                        inst.GetComponent<FieldValueGizmo>().SetValue(value);
-                        inst.transform.localScale = Vector3.one * 0.05f;
-                        gizmos.Add(inst);
+                        inst.SetActive(false);
                     }
                 }
             }
@@ -55,8 +99,9 @@ public class FieldGizmoRenderer : MonoBehaviour
         {
             DestroyImmediate(go);
         }
+        gizmos.RemoveRange(0, gizmos.Count);
 
-        scalarField.GenerateValues(scalarField.Resolution, scalarField.gridScale, 0f);
+        scalarField.GenerateValues(scalarField.Resolution, scalarField.gridScale);
 
     }
 

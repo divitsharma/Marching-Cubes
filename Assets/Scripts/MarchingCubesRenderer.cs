@@ -7,9 +7,9 @@ using UnityEngine;
 public class MarchingCubesRenderer : MonoBehaviour
 {
     // Points ABOVE surface level are INSIDE of a shape.
-    [Tooltip("Point above the surface level are inside of a shape")]
-    [Range(0f, 1f)]
-    public float surfaceLevel;
+    //[Tooltip("Point above the surface level are inside of a shape")]
+    //[Range(0f, 1f)]
+    //public float surfaceLevel;
 
     float gizmoRadius = 0.1f;
     float gizmoDrawScale;
@@ -45,7 +45,6 @@ public class MarchingCubesRenderer : MonoBehaviour
             gizmoRadius = scalarField.gridScale / (scalarField.Resolution * 8);
             // -1 to represent number of cubes
             gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
-
         }
     }
 
@@ -93,7 +92,7 @@ public class MarchingCubesRenderer : MonoBehaviour
         int cubeIndex = 0;
         for (int i = 0; i < 8; i++)
         {
-            if (scalarField.ValueAt(pos + vtxIndices[i]) > surfaceLevel)
+            if (scalarField.ValueAt(pos + vtxIndices[i]) > scalarField.GetSurfaceLevel())
             {
                 cubeIndex |= (int)Mathf.Pow(2f, i);
             }
@@ -108,7 +107,7 @@ public class MarchingCubesRenderer : MonoBehaviour
     {
         a += pos;
         b += pos;
-        return a + (surfaceLevel - scalarField.ValueAt(a)) * (b - a) / (scalarField.ValueAt(b) - scalarField.ValueAt(a));
+        return a + (scalarField.GetSurfaceLevel() - scalarField.ValueAt(a)) * (b - a) / (scalarField.ValueAt(b) - scalarField.ValueAt(a));
     }
 
     
