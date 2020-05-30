@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 
@@ -13,18 +15,49 @@ public class FieldGizmoRenderer : MonoBehaviour
     public GameObject gizmoPrefab;
     List<GameObject> gizmos = new List<GameObject>();
 
+    [SerializeField] bool showUnityGizmos = false;
+
     private void Start()
     {
         scalarField.AddObserver(UpdateGizmos);
     }
 
+#if UNITY_EDITOR
     // Don't do everything in edit mode!
     private void OnValidate()
     {
         if (scalarField == null)
             scalarField = GameObject.FindObjectOfType<ScalarField>();
 
-        scalarField.AddObserver(UpdateGizmos);
+        scalarField.RemoveObserver(UpdateGizmos);
+    }
+#endif
+
+
+    private void OnDrawGizmos()
+    {
+        if (!showUnityGizmos)
+        {
+            return;
+        }
+
+        float gizmoDrawScale = scalarField.GridScale;
+        for (int x = 0; x < scalarField.Length; x++)
+        {
+            for (int y = 0; y < scalarField.Height; y++)
+            {
+                for (int z = 0; z < scalarField.Width; z++)
+                {
+                    float value = scalarField.ValueAt(new Vector3(x, y, z));
+
+                    if (!hideUnderValued || scalarField.ValueAt(x,y,z) > scalarField.GetSurfaceLevel())
+                    {
+                        Gizmos.color = Color.Lerp(Color.black, Color.white, value);
+                        Gizmos.DrawSphere(new Vector3(x, y, z) * gizmoDrawScale, 1f / gizmoDrawScale);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -32,7 +65,7 @@ public class FieldGizmoRenderer : MonoBehaviour
     {
         if (gizmos == null || gizmos.Count == 0)
         {
-            Debug.LogError("Gizmos list doesn't exist");
+            //Debug.LogError("Gizmos list doesn't exist");
             return;
         }
 
@@ -93,7 +126,7 @@ public class FieldGizmoRenderer : MonoBehaviour
         }
     }
 
-    public void ResetField()
+    public void ResetField(float value = -1)
     {
         foreach (GameObject go in gizmos)
         {
@@ -101,7 +134,7 @@ public class FieldGizmoRenderer : MonoBehaviour
         }
         gizmos.RemoveRange(0, gizmos.Count);
 
-        scalarField.GenerateValues(scalarField.gridScale);
+        scalarField.GenerateValues(scalarField.gridScale, value);
 
     }
 
@@ -123,6 +156,8 @@ public class FieldGizmoRenderer : MonoBehaviour
     }
 }
 
+#if UNITY_EDITOR
+
 [CustomEditor(typeof(FieldGizmoRenderer))]
 public class FieldGizmoRendererEditor : Editor
 {
@@ -131,19 +166,25 @@ public class FieldGizmoRendererEditor : Editor
         DrawDefaultInspector();
         FieldGizmoRenderer fieldTarget = (FieldGizmoRenderer)target;
 
-        if (GUILayout.Button("Render"))
+        if (GUILayout.Button("Instantiate Gizmos"))
         {
             fieldTarget.RenderGizmos(null);
         }
 
-        if (GUILayout.Button("Print values"))
+        if (GUILayout.Button("Print Values"))
         {
             fieldTarget.PrintValues();
         }
 
-        if (GUILayout.Button("Reset field"))
+        if (GUILayout.Button("Clear Values"))
+        {
+            fieldTarget.ResetField(0);
+        }
+
+        if (GUILayout.Button("Regenerate Values"))
         {
             fieldTarget.ResetField();
         }
     }
 }
+#endif

@@ -1,0 +1,35 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels (functions)
+#pragma kernel CSMain
+#pragma kernel Multiply
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+// unity outputs a texture by default
+// RW means shader will read and write to
+RWTexture2D<float4> Result;
+
+// Custom input stream
+struct VecMatPair
+{
+	float3 pos;
+	float3 otherpos;
+};
+
+RWStructuredBuffer<VecMatPair> dataBuffer;
+
+// dimensions of thread groups spawned (each group has 64 threads)
+// each gpu processor runs 1 thread group at a time
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID) // id is xy of the pixel being worked on
+{
+    // TODO: insert actual code here!
+
+	Result[id.xy] = float4(id.x & id.y, (id.x & 15) / 15.0, (id.y & 15) / 15.0, 0.0);
+	//Result[id.xy] = float4(1, 0, 0, 1);
+}
+
+[numthreads(16, 1, 1)]
+void Multiply(uint3 id : SV_DispatchThreadID)
+{
+	dataBuffer[id.x].pos = dataBuffer[id.x].pos + dataBuffer[id.x].otherpos;
+}

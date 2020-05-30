@@ -6,7 +6,6 @@ using UnityEngine;
 public class ScalarFieldData : ScriptableObject
 {
     public float[] values;
-    public int resolution;
 
     public int height;
     public int length;

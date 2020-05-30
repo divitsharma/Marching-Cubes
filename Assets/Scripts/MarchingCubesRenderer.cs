@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using System.Linq;
 using UnityEngine;
 
@@ -26,6 +28,7 @@ public class MarchingCubesRenderer : MonoBehaviour
         new Vector3(0,1,0),
     };
 
+#if UNITY_EDITOR
     private void OnValidate()
     {
         if (meshfilter == null)
@@ -35,11 +38,13 @@ public class MarchingCubesRenderer : MonoBehaviour
 
         if (scalarField != null)
         {
+            // Don't march cubes on update for now
             scalarField.AddObserver(MarchCubes);
             // -1 to represent number of cubes
             //gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
         }
     }
+#endif
 
     public void MarchCubes(ScalarField s)
     {
@@ -137,7 +142,7 @@ public class MarchingCubesRenderer : MonoBehaviour
 
 }
 
-
+#if UNITY_EDITOR
 [CustomEditor(typeof(MarchingCubesRenderer))]
 public class FieldRendererEditor : Editor
 {
@@ -153,3 +158,4 @@ public class FieldRendererEditor : Editor
         }
     }
 }
+#endif

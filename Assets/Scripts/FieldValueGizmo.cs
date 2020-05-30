@@ -12,6 +12,7 @@ public class FieldValueGizmo : MonoBehaviour
     // This should be a singleton
     ScalarField scalarField;
 
+#if UNITY_EDITOR
     private void OnValidate()
     {
         if (scalarField == null)
@@ -20,6 +21,7 @@ public class FieldValueGizmo : MonoBehaviour
         scalarField.SetValue(point, value);
         //GetComponent<MeshRenderer>().material.SetColor("_Color", Color.Lerp(Color.black, Color.white, value));
     }
+#endif
     
     public void SetPoint(Vector3 point)
     {
