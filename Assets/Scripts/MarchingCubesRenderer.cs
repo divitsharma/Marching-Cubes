@@ -16,6 +16,8 @@ public class MarchingCubesRenderer : MonoBehaviour
     //MeshRenderer meshRenderer;
 
     // Array index is vertex no. corresponding to index.
+    // These "relative position" vectors are added to the bottom left pos of each
+    // cube to get the absolute position of each corner.
     Vector3[] vtxIndices = new Vector3[]
     {
         new Vector3(0,0,1),
@@ -49,7 +51,7 @@ public class MarchingCubesRenderer : MonoBehaviour
     public void MarchCubes(ScalarField s)
     {
         // Go through the grid eight vertices at a time (2x2x2 cubes).
-        // vtx indices are 001,101,100,000 and 011,111,110,100
+        // vtx indices are (xyz) 001,101,100,000 and 011,111,110,100
         // for each cube: identify 000 node, ex. 020, add cube's relative indices
         // to get vtx index
 
@@ -87,6 +89,8 @@ public class MarchingCubesRenderer : MonoBehaviour
     }
 
 
+    // Triangle-table index of the cube.
+    // pos: bottom left absolute position of the cube.
     int GetCubeIndex(Vector3 pos)
     {
         int cubeIndex = 0;
@@ -115,6 +119,7 @@ public class MarchingCubesRenderer : MonoBehaviour
     {
         int[] triangleIndices = Tables.triTable[cubeIndex];
 
+        // TriTable gives three-tuples of edge indexes that make up a triangle in this cube.
         for (int i = 0; triangleIndices[i] != -1; i += 3)
         {
             // first point

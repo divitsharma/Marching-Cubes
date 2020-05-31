@@ -1,6 +1,9 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels (functions)
 #pragma kernel CSMain
 #pragma kernel Multiply
+#pragma kernel MarchCubes
+
+#include "tables.compute"
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
@@ -32,4 +35,17 @@ void CSMain (uint3 id : SV_DispatchThreadID) // id is xy of the pixel being work
 void Multiply(uint3 id : SV_DispatchThreadID)
 {
 	dataBuffer[id.x].pos = dataBuffer[id.x].pos + dataBuffer[id.x].otherpos;
+}
+
+
+// This may be too big to efficiently pass to GPU.
+StructuredBuffer<float> scalarField;
+
+
+// Run for every cube in the current chunk. Each thread group given 64 threads.
+// id.xyz represents absolute bottom left position of a cube.
+[numthreads(4, 4, 4)]
+void MarchCubes(uint3 id: SV_DispatchThreadID)
+{
+
 }

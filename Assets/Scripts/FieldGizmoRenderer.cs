@@ -126,7 +126,7 @@ public class FieldGizmoRenderer : MonoBehaviour
         }
     }
 
-    public void ResetField(float value = -1)
+    public void ClearGizmos()
     {
         foreach (GameObject go in gizmos)
         {
@@ -134,26 +134,10 @@ public class FieldGizmoRenderer : MonoBehaviour
         }
         gizmos.RemoveRange(0, gizmos.Count);
 
-        scalarField.GenerateValues(scalarField.gridScale, value);
-
+        //scalarField.GenerateValues(scalarField.gridScale, value);
     }
 
-    public void PrintValues()
-    {
-        for (int z = 0; z < scalarField.Width; z++)
-        {
-            string s = "";
-            for (int y = 0; y < scalarField.Height; y++)
-            {
-                for (int x = 0; x < scalarField.Length; x++)
-                {
-                    s += scalarField.ValueAt(new Vector3(x, y, z)) + " ";
-                }
-                s += "\n";
-            }
-            Debug.Log(s);
-        }
-    }
+
 }
 
 #if UNITY_EDITOR
@@ -171,20 +155,11 @@ public class FieldGizmoRendererEditor : Editor
             fieldTarget.RenderGizmos(null);
         }
 
-        if (GUILayout.Button("Print Values"))
+        if (GUILayout.Button("Clear Gizmos"))
         {
-            fieldTarget.PrintValues();
-        }
-
-        if (GUILayout.Button("Clear Values"))
-        {
-            fieldTarget.ResetField(0);
-        }
-
-        if (GUILayout.Button("Regenerate Values"))
-        {
-            fieldTarget.ResetField();
+            fieldTarget.ClearGizmos();
         }
     }
 }
+
 #endif

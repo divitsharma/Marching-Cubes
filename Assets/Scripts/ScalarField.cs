@@ -5,7 +5,7 @@ public class ScalarField : MonoBehaviour
 {
     // Unit length of the field - it shouldn't mean this anymore
     [Tooltip("Unit length of each virtual cube")]
-    public float gridScale;
+    [SerializeField] float gridScale;
     public float GridScale { get => gridScale; }
 
     [Tooltip("Point above the surface level are inside of a shape")]
@@ -42,14 +42,13 @@ public class ScalarField : MonoBehaviour
     }
 
 
-    public void GenerateValues(float gridScale, float valueOverride = -1)
+    public void GenerateValues(float valueOverride = -1)
     {
         noise.Init();
 
         int height = scalarFieldData.height;
         int length = scalarFieldData.length;
         int width = scalarFieldData.width;
-        this.gridScale = gridScale;
 
         scalarFieldData.values = new float[height * width * length];
         // fill in values
