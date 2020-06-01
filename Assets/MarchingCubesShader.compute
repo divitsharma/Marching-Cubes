@@ -38,14 +38,28 @@ void Multiply(uint3 id : SV_DispatchThreadID)
 }
 
 
+struct Triangle
+{
+	float3 a;
+	float3 b;
+	float3 c;
+};
+AppendStructuredBuffer<Triangle> triangles;
+// how many triangles/vertices will there be? how to index in this array to fill it?
+// every cube can have max 5 triangles, but most cubes will have no triangles, and how to index those 5?
+// just use triangle array to be more efficient?
+//RWStructuredBuffer<float3> vertices;
 // This may be too big to efficiently pass to GPU.
 StructuredBuffer<float> scalarField;
 
-
-// Run for every cube in the current chunk. Each thread group given 64 threads.
+// Run a thread for every cube in the current chunk. Each thread group given 64 threads.
 // id.xyz represents absolute bottom left position of a cube.
 [numthreads(4, 4, 4)]
 void MarchCubes(uint3 id: SV_DispatchThreadID)
 {
-
+	Triangle t;
+	t.a = id.x + 0.5;
+	t.b = id.y + 0.5;
+	t.c = id.z + 0.5;
+	triangles.Append(t);
 }

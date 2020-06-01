@@ -6,6 +6,13 @@ using UnityEditor;
 using System.Linq;
 using UnityEngine;
 
+struct Triangle
+{
+    Vector3 a;
+    Vector3 b;
+    Vector3 c;
+}
+
 public class MarchingCubesRenderer : MonoBehaviour
 {
     //float gizmoDrawScale = 1;
@@ -30,6 +37,10 @@ public class MarchingCubesRenderer : MonoBehaviour
         new Vector3(0,1,0),
     };
 
+    [Header("Compute Shader")]
+    [SerializeField] bool useComputeShader = true;
+    [SerializeField] ComputeShader marchingCubesShader;
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
@@ -48,12 +59,40 @@ public class MarchingCubesRenderer : MonoBehaviour
     }
 #endif
 
+    void MarchCubesUsingShader()
+    {
+        int kernel = marchingCubesShader.FindKernel("MarchCubes");
+
+        // dont create each time - reuse
+        ComputeBuffer trianglesBuffer = new ComputeBuffer(0, sizeof(float) * 3 * 3,  ComputeBufferType.Append);
+        trianglesBuffer.SetCounterValue(0);
+        marchingCubesShader.SetBuffer(kernel, "triangles", trianglesBuffer);
+        // will dispatch 1x1x1 thread groups
+        marchingCubesShader.Dispatch(kernel, 1, 1, 1);
+
+        // read count back
+        ComputeBuffer countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
+        int[] countArray = new int[1];
+        countBuffer.GetData(countArray);
+
+        // read data back
+        ComputeBuffer.CopyCount(trianglesBuffer, countBuffer, 0);
+        Triangle[] triangles = new Triangle[countArray[0]];
+        trianglesBuffer.GetData(triangles);
+    }
+
     public void MarchCubes(ScalarField s)
     {
         // Go through the grid eight vertices at a time (2x2x2 cubes).
         // vtx indices are (xyz) 001,101,100,000 and 011,111,110,100
         // for each cube: identify 000 node, ex. 020, add cube's relative indices
         // to get vtx index
+
+        if (useComputeShader)
+        {
+            MarchCubesUsingShader();
+            return;
+        }
 
         List<Vector3> vertices = new List<Vector3>();
         List<int> triangles = new List<int>();
