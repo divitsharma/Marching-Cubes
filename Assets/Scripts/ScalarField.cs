@@ -9,7 +9,7 @@ public class ScalarField : MonoBehaviour
     public float GridScale { get => gridScale; }
 
     [Tooltip("Point above the surface level are inside of a shape")]
-    [Range(0f,1f)] [SerializeField] float surfaceLevel;
+    [Range(0f, 1f)] [SerializeField] float surfaceLevel;
 
     [Header("Noise Variables")]
     public int period;
@@ -70,6 +70,7 @@ public class ScalarField : MonoBehaviour
     public int ToArrayIndex(int x, int y, int z, int s = -1)
     {
         //if (s == -1) s = scalarFieldData.resolution;
+        // USED TO BE LENGTH INSTEAD OF WIDTH - make them different in data and test
         return scalarFieldData.height * scalarFieldData.length * z + (scalarFieldData.length * y + x);
     }
 
@@ -86,6 +87,12 @@ public class ScalarField : MonoBehaviour
     public float ValueAt(Vector3 pos)
     {
         return ValueAt((int)pos.x, (int)pos.y, (int)pos.z);
+    }
+
+    // how to make this const?
+    public float[] GetValues()
+    {
+        return scalarFieldData.values;
     }
 
     public void SetValue(int x, int y, int z, float value)

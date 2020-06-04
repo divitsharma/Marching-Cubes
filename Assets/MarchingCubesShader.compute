@@ -1,6 +1,6 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels (functions)
-#pragma kernel CSMain
-#pragma kernel Multiply
+//#pragma kernel CSMain
+//#pragma kernel Multiply
 #pragma kernel MarchCubes
 
 #include "tables.compute"
@@ -9,33 +9,33 @@
 // with cs.SetTexture
 // unity outputs a texture by default
 // RW means shader will read and write to
-RWTexture2D<float4> Result;
-
-// Custom input stream
-struct VecMatPair
-{
-	float3 pos;
-	float3 otherpos;
-};
-
-RWStructuredBuffer<VecMatPair> dataBuffer;
-
-// dimensions of thread groups spawned (each group has 64 threads)
-// each gpu processor runs 1 thread group at a time
-[numthreads(8,8,1)]
-void CSMain (uint3 id : SV_DispatchThreadID) // id is xy of the pixel being worked on
-{
-    // TODO: insert actual code here!
-
-	Result[id.xy] = float4(id.x & id.y, (id.x & 15) / 15.0, (id.y & 15) / 15.0, 0.0);
-	//Result[id.xy] = float4(1, 0, 0, 1);
-}
-
-[numthreads(16, 1, 1)]
-void Multiply(uint3 id : SV_DispatchThreadID)
-{
-	dataBuffer[id.x].pos = dataBuffer[id.x].pos + dataBuffer[id.x].otherpos;
-}
+//RWTexture2D<float4> Result;
+//
+//// Custom input stream
+//struct VecMatPair
+//{
+//	float3 pos;
+//	float3 otherpos;
+//};
+//
+//RWStructuredBuffer<VecMatPair> dataBuffer;
+//
+//// dimensions of thread groups spawned (each group has 64 threads)
+//// each gpu processor runs 1 thread group at a time
+//[numthreads(8,8,1)]
+//void CSMain (uint3 id : SV_DispatchThreadID) // id is xy of the pixel being worked on
+//{
+//    // TODO: insert actual code here!
+//
+//	Result[id.xy] = float4(id.x & id.y, (id.x & 15) / 15.0, (id.y & 15) / 15.0, 0.0);
+//	//Result[id.xy] = float4(1, 0, 0, 1);
+//}
+//
+//[numthreads(16, 1, 1)]
+//void Multiply(uint3 id : SV_DispatchThreadID)
+//{
+//	dataBuffer[id.x].pos = dataBuffer[id.x].pos + dataBuffer[id.x].otherpos;
+//}
 
 
 struct Triangle
@@ -44,22 +44,87 @@ struct Triangle
 	float3 b;
 	float3 c;
 };
+// consume buffers can be used to read in a list instead of output a list
+// using lists is a way of modifying the length of data gpu is working with (eg. spawn/kill things)
 AppendStructuredBuffer<Triangle> triangles;
-// how many triangles/vertices will there be? how to index in this array to fill it?
-// every cube can have max 5 triangles, but most cubes will have no triangles, and how to index those 5?
-// just use triangle array to be more efficient?
-//RWStructuredBuffer<float3> vertices;
 // This may be too big to efficiently pass to GPU.
 StructuredBuffer<float> scalarField;
+int fieldLength;
+int fieldHeight;
+int fieldWidth;
+
+float surfaceLevel;
+float gridScale;
+
+int ToArrayIndex(float3 pos)
+{
+	return fieldHeight * fieldLength * pos.z + (fieldLength * pos.y + pos.x);
+}
+
+int getCubeIndex(float3 pos)
+{
+	int index = 0;
+	for (int i = 0; i < 8; i++) {
+		float fieldValue = scalarField[ToArrayIndex(pos + vtxIndices[i])];
+		// TODO: experiment changing to |= pow() * (value > level)
+		if (fieldValue > surfaceLevel) {
+			index |= int(pow(2, i));
+		}
+	}
+	return index;
+}
+
+float3 VertexInterpolate(float3 a, float3 b, float3 pos)
+{
+	a += pos;
+	b += pos;
+	return float3(1, 0, 0);
+	float fieldA = scalarField[ToArrayIndex(a)];
+	float fieldB = scalarField[ToArrayIndex(b)];
+	float3 vectorDiff = b - a;
+
+	float surfaceDiff = surfaceLevel - fieldA;
+	return a + surfaceDiff * vectorDiff / (fieldB - fieldA);
+}
 
 // Run a thread for every cube in the current chunk. Each thread group given 64 threads.
 // id.xyz represents absolute bottom left position of a cube.
+// how does each dimension affect performance?
 [numthreads(4, 4, 4)]
 void MarchCubes(uint3 id: SV_DispatchThreadID)
 {
-	Triangle t;
-	t.a = id.x + 0.5;
-	t.b = id.y + 0.5;
-	t.c = id.z + 0.5;
-	triangles.Append(t);
+	// treat id.xyz as length, height, width
+	/*Triangle t;
+	t.a = id.xyz + float3(0.0, 0.0, 0.5);
+	t.b = id.xyz + float3(0.5, 0.0, 0.0);
+	t.c = id.xyz + float3(0.0, 0.5, 0.0);
+	triangles.Append(t);*/
+
+	int cubeIndex = getCubeIndex(id.xyz);
+	int row = 16 * cubeIndex;
+	for (int j = 0; j < 16; j += 3) {
+
+		if(triTable[row + j] != -1) {
+
+		// first point
+		int i0A = CornerIndexFromEdgeA[triTable[row + j]];
+		int i0B = CornerIndexFromEdgeB[triTable[row + j]];
+		float3 v0 = VertexInterpolate(vtxIndices[i0A], vtxIndices[i0B], id.xyz);
+
+		int i1A = CornerIndexFromEdgeA[triTable[row + j + 1]];
+		int i1B = CornerIndexFromEdgeB[triTable[row + j + 1]];
+		float3 v1 = VertexInterpolate(vtxIndices[i1A], vtxIndices[i1B], id.xyz);
+
+		int i2A = CornerIndexFromEdgeA[triTable[row + j + 2]];
+		int i2B = CornerIndexFromEdgeB[triTable[row + j + 2]];
+		float3 v2 = VertexInterpolate(vtxIndices[i2A], vtxIndices[i2B], id.xyz);
+
+		// check order.
+		Triangle t;
+		t.a = v2;
+		t.b = v1;
+		t.c = v0;
+		triangles.Append(t);
+		}
+	}
 }

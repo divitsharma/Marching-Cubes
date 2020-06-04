@@ -8,9 +8,9 @@ using UnityEngine;
 
 struct Triangle
 {
-    Vector3 a;
-    Vector3 b;
-    Vector3 c;
+    public Vector3 a;
+    public Vector3 b;
+    public Vector3 c;
 }
 
 public class MarchingCubesRenderer : MonoBehaviour
@@ -40,6 +40,9 @@ public class MarchingCubesRenderer : MonoBehaviour
     [Header("Compute Shader")]
     [SerializeField] bool useComputeShader = true;
     [SerializeField] ComputeShader marchingCubesShader;
+    // should be max triangles per cube * max cubes
+    int MAX_TRIANGLES = 100;
+    ComputeBuffer trianglesBuffer;
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -52,7 +55,7 @@ public class MarchingCubesRenderer : MonoBehaviour
         if (scalarField != null)
         {
             // Don't march cubes on update for now
-            scalarField.AddObserver(MarchCubes);
+            scalarField.RemoveObserver(MarchCubes);
             // -1 to represent number of cubes
             //gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
         }
@@ -62,23 +65,92 @@ public class MarchingCubesRenderer : MonoBehaviour
     void MarchCubesUsingShader()
     {
         int kernel = marchingCubesShader.FindKernel("MarchCubes");
+        Debug.Log("Running compute shader");
+
+        int nCubesX = scalarField.Length - 1;
+        int nCubesY = scalarField.Height - 1;
+        int nCubesZ = scalarField.Width - 1;
+        // 5 triangles max per cube according to tritable
+        MAX_TRIANGLES = nCubesX * nCubesX * nCubesY * 5;
 
         // dont create each time - reuse
-        ComputeBuffer trianglesBuffer = new ComputeBuffer(0, sizeof(float) * 3 * 3,  ComputeBufferType.Append);
-        trianglesBuffer.SetCounterValue(0);
+        // so the count is allocated space, and countervalue is the actual number of elements?
+        trianglesBuffer = new ComputeBuffer(MAX_TRIANGLES, sizeof(float) * 3 * 3,  ComputeBufferType.Append);
+        trianglesBuffer.SetCounterValue(0); // set num items in buffer to 0
         marchingCubesShader.SetBuffer(kernel, "triangles", trianglesBuffer);
-        // will dispatch 1x1x1 thread groups
-        marchingCubesShader.Dispatch(kernel, 1, 1, 1);
 
-        // read count back
+        // make new buffer only when scalar field changes
+        ComputeBuffer scalarFieldBuffer = new ComputeBuffer(
+            scalarField.Length * scalarField.Width * scalarField.Height, sizeof(float));
+        scalarFieldBuffer.SetData(scalarField.GetValues());
+        marchingCubesShader.SetBuffer(kernel, "scalarField", scalarFieldBuffer);
+
+        marchingCubesShader.SetInt("fieldLength", scalarField.Length);
+        marchingCubesShader.SetInt("fieldHeight", scalarField.Height);
+        marchingCubesShader.SetInt("fieldWidth", scalarField.Width);
+        marchingCubesShader.SetFloat("surfaceLevel", scalarField.GetSurfaceLevel());
+        marchingCubesShader.SetFloat("gridScale", scalarField.GridScale);
+
+        // dispatch a thread for each CUBE. ncubes must be divisible by dimensions of the thread groups
+        // will dispatch x*y*z thread groups
+        marchingCubesShader.Dispatch(kernel, nCubesX / 4, nCubesY / 4, nCubesZ / 4);
+
+        //=== Read stuff back
+        // read count back - also create once and reuse
         ComputeBuffer countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
-        int[] countArray = new int[1];
+        ComputeBuffer.CopyCount(trianglesBuffer, countBuffer, 0);
+        int[] countArray = new int[1] { 0 };
         countBuffer.GetData(countArray);
+        Debug.Log(countArray[0]);
 
         // read data back
-        ComputeBuffer.CopyCount(trianglesBuffer, countBuffer, 0);
-        Triangle[] triangles = new Triangle[countArray[0]];
-        trianglesBuffer.GetData(triangles);
+        Triangle[] trianglesArray = new Triangle[countArray[0]];
+        trianglesBuffer.GetData(trianglesArray);
+
+        // don't dispose every frame - what it do, when can release?
+        countBuffer.Release();
+        trianglesBuffer.Release();
+        scalarFieldBuffer.Release();
+
+        foreach (Triangle t in trianglesArray)
+        {
+            if (t.a == t.b)
+            Debug.Log(t.a + " " + t.b + " " + t.c);
+        }
+
+        // Create the mesh
+        Vector3[] vertices = new Vector3[trianglesArray.Length * 3];
+        int[] triangles = new int[trianglesArray.Length * 3];
+        for (int i = 0; i < trianglesArray.Length; i++)
+        {
+            int j = i * 3;
+            vertices[j] = trianglesArray[i].a;
+            vertices[j+1] = trianglesArray[i].b;
+            vertices[j+2] = trianglesArray[i].c;
+            triangles[j] = j;
+            triangles[j+1] = j+1;
+            triangles[j+2] = j+2;
+        }
+
+        UpdateMesh(vertices, triangles);
+    }
+
+    private void OnDestroy()
+    {
+        // release compute buffers
+        trianglesBuffer.Release();
+    }
+
+    void UpdateMesh(Vector3[] vertices, int[] triangles)
+    {
+        // NOTE: UNITY DOESN'T RENDER MORE THAN 65534 VERTICES PER MESH
+        if (meshfilter.sharedMesh == null)
+            meshfilter.sharedMesh = new Mesh();
+
+        meshfilter.sharedMesh.Clear();
+        meshfilter.sharedMesh.vertices = vertices;
+        meshfilter.sharedMesh.triangles = triangles;
+        meshfilter.sharedMesh.RecalculateNormals();
     }
 
     public void MarchCubes(ScalarField s)
@@ -118,13 +190,8 @@ public class MarchingCubesRenderer : MonoBehaviour
                 }
             }
         }
-        
-        if (meshfilter.sharedMesh == null)
-            meshfilter.sharedMesh = new Mesh();
-        meshfilter.sharedMesh.Clear();
-        meshfilter.sharedMesh.vertices = vertices.Select(x => x * scalarField.GridScale).ToArray();
-        meshfilter.sharedMesh.triangles = triangles.ToArray();
-        meshfilter.sharedMesh.RecalculateNormals();
+
+        UpdateMesh(vertices.Select(x => x * scalarField.GridScale).ToArray(), triangles.ToArray());
     }
 
 

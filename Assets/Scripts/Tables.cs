@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Tables
 {
+    // to used??
     public static int[] EdgeTable = {
         0x0,
     0x109,
