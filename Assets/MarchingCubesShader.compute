@@ -48,7 +48,7 @@ struct Triangle
 // using lists is a way of modifying the length of data gpu is working with (eg. spawn/kill things)
 AppendStructuredBuffer<Triangle> triangles;
 // This may be too big to efficiently pass to GPU.
-StructuredBuffer<float> scalarField;
+RWStructuredBuffer<float> scalarField;
 int fieldLength;
 int fieldHeight;
 int fieldWidth;
@@ -56,35 +56,40 @@ int fieldWidth;
 float surfaceLevel;
 float gridScale;
 
+
+
 int ToArrayIndex(float3 pos)
 {
 	return fieldHeight * fieldLength * pos.z + (fieldLength * pos.y + pos.x);
 }
 
-int getCubeIndex(float3 pos)
-{
-	int index = 0;
-	for (int i = 0; i < 8; i++) {
-		float fieldValue = scalarField[ToArrayIndex(pos + vtxIndices[i])];
-		// TODO: experiment changing to |= pow() * (value > level)
-		if (fieldValue > surfaceLevel) {
-			index |= int(pow(2, i));
-		}
-	}
-	return index;
-}
+//int getCubeIndex(float3 pos)
+//{
+//	int index = 0;
+//	for (int i = 0; i < 8; i++) {
+//		//float fieldValue = scalarField[ToArrayIndex(pos + vtxIndices[i])];
+//		// TODO: experiment changing to |= pow() * (value > level)
+//		index |= int(pow(2, i));
+//		//if (scalarField[ToArrayIndex(pos + vtxIndices[i])] > surfaceLevel) {
+//		//}
+//	}
+//	return index;
+//}
 
 float3 VertexInterpolate(float3 a, float3 b, float3 pos)
 {
 	a += pos;
 	b += pos;
-	return float3(1, 0, 0);
-	float fieldA = scalarField[ToArrayIndex(a)];
+	//return float3(1, 0, 0);
+	/*float fieldA = scalarField[ToArrayIndex(a)];
 	float fieldB = scalarField[ToArrayIndex(b)];
 	float3 vectorDiff = b - a;
+	float fieldDiff = fieldB - fieldA;
 
 	float surfaceDiff = surfaceLevel - fieldA;
-	return a + surfaceDiff * vectorDiff / (fieldB - fieldA);
+	return a.xyz +surfaceDiff *vectorDiff / fieldDiff;*/
+	//return (a + b) * 0.5;
+	return a + (surfaceLevel - scalarField[ToArrayIndex(a)]) * (b - a) / (scalarField[ToArrayIndex(b)] - scalarField[ToArrayIndex(a)]);
 }
 
 // Run a thread for every cube in the current chunk. Each thread group given 64 threads.
@@ -100,31 +105,69 @@ void MarchCubes(uint3 id: SV_DispatchThreadID)
 	t.c = id.xyz + float3(0.0, 0.5, 0.0);
 	triangles.Append(t);*/
 
-	int cubeIndex = getCubeIndex(id.xyz);
-	int row = 16 * cubeIndex;
-	for (int j = 0; j < 16; j += 3) {
+	int cubeIndex = 0;
+	//cubeIndex |= 1;
+	//cubeIndex |= 8;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[0])] > surfaceLevel) cubeIndex |= 1;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[1])] > surfaceLevel) cubeIndex |= 2;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[2])] > surfaceLevel) cubeIndex |= 4;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[3])] > surfaceLevel) cubeIndex |= 8;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[4])] > surfaceLevel) cubeIndex |= 16;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[5])] > surfaceLevel) cubeIndex |= 32;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[6])] > surfaceLevel) cubeIndex |= 64;
+	if (scalarField[ToArrayIndex(id.xyz + vtxIndices[7])] > surfaceLevel) cubeIndex |= 128;
 
-		if(triTable[row + j] != -1) {
+	int triIndices[] = triTable[cubeIndex];
+	for (int i = 0; triIndices[i] != -1; i += 3) {
+		int edge0 = triIndices[i]; // 0,11,2
+		int edge1 = triIndices[i+1];
+		int edge2 = triIndices[i+2];
 
-		// first point
-		int i0A = CornerIndexFromEdgeA[triTable[row + j]];
-		int i0B = CornerIndexFromEdgeB[triTable[row + j]];
-		float3 v0 = VertexInterpolate(vtxIndices[i0A], vtxIndices[i0B], id.xyz);
+		//// first point
+		//int i0A = CornerIndexFromEdgeA[edge0];
+		//int i0B = CornerIndexFromEdgeB[edge0];
+		////float3 v0 = VertexInterpolate(vtxIndices[i0A], vtxIndices[i0B], id.xyz);
+		//float3 v0 = vtxIndices[i0A];
 
-		int i1A = CornerIndexFromEdgeA[triTable[row + j + 1]];
-		int i1B = CornerIndexFromEdgeB[triTable[row + j + 1]];
-		float3 v1 = VertexInterpolate(vtxIndices[i1A], vtxIndices[i1B], id.xyz);
+		//int i1A = CornerIndexFromEdgeA[edge1];
+		//int i1B = CornerIndexFromEdgeB[edge1];
+		//float3 v1 = vtxIndices[i1A];
+		////float3 v1 = VertexInterpolate(vtxIndices[i1A], vtxIndices[i1B], id.xyz);
 
-		int i2A = CornerIndexFromEdgeA[triTable[row + j + 2]];
-		int i2B = CornerIndexFromEdgeB[triTable[row + j + 2]];
-		float3 v2 = VertexInterpolate(vtxIndices[i2A], vtxIndices[i2B], id.xyz);
+		//int i2A = CornerIndexFromEdgeA[edge2];
+		//int i2B = CornerIndexFromEdgeB[edge2];
+		////float3 v2 = VertexInterpolate(vtxIndices[i2A], vtxIndices[i2B], id.xyz);
+		//float3 v2 = vtxIndices[i2A];
 
-		// check order.
-		Triangle t;
-		t.a = v2;
-		t.b = v1;
-		t.c = v0;
-		triangles.Append(t);
-		}
+		// check order
+		//Triangle t;
+		//t.a = v2;
+		//t.b = v1;
+		//t.c = v0;
+		//triangles.Append(t);
+		////}
+
+		int a0 = CornerIndexFromEdgeA[edge0]; //0
+		int b0 = CornerIndexFromEdgeB[edge0]; //1
+
+		int a1 = CornerIndexFromEdgeA[edge1];
+		int b1 = CornerIndexFromEdgeB[edge1];
+
+		int a2 = CornerIndexFromEdgeA[edge2];
+		int b2 = CornerIndexFromEdgeB[edge2];
+
+		Triangle tri;
+		tri.c = VertexInterpolate(vtxIndices[a0], vtxIndices[b0], id.xyz) *gridScale;
+		tri.b = VertexInterpolate(vtxIndices[a1], vtxIndices[b1], id.xyz) *gridScale;
+		tri.a = VertexInterpolate(vtxIndices[a2], vtxIndices[b2], id.xyz) *gridScale;
+		//tri.a = float3(scalarField[ToArrayIndex(id.xyz + vtxIndices[0])],
+		//	scalarField[ToArrayIndex(id.xyz + vtxIndices[1])],
+		//	scalarField[ToArrayIndex(id.xyz + vtxIndices[2])]);
+		//tri.b = vtxIndices[b0];
+		//tri.c = float3(a0, b0, 0);
+		/*tri.a = id.xyz + float3(0.0, 0.0, 0.5);
+		tri.b = id.xyz + float3(0.5, 0.0, 0.0);
+		tri.c = id.xyz + float3(0.0, 0.5, 0.0);*/
+		triangles.Append(tri);
 	}
 }

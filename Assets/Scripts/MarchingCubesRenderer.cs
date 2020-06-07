@@ -83,6 +83,7 @@ public class MarchingCubesRenderer : MonoBehaviour
         ComputeBuffer scalarFieldBuffer = new ComputeBuffer(
             scalarField.Length * scalarField.Width * scalarField.Height, sizeof(float));
         scalarFieldBuffer.SetData(scalarField.GetValues());
+        Debug.Log(scalarFieldBuffer.count);
         marchingCubesShader.SetBuffer(kernel, "scalarField", scalarFieldBuffer);
 
         marchingCubesShader.SetInt("fieldLength", scalarField.Length);
@@ -95,6 +96,13 @@ public class MarchingCubesRenderer : MonoBehaviour
         // will dispatch x*y*z thread groups
         marchingCubesShader.Dispatch(kernel, nCubesX / 4, nCubesY / 4, nCubesZ / 4);
 
+        float[] data = new float[scalarField.Length * scalarField.Width * scalarField.Height];
+        scalarFieldBuffer.GetData(data);
+        //for (int i = 0; i < 1000; i++)
+        //{
+        //    Debug.Log(data[i]);
+        //}
+
         //=== Read stuff back
         // read count back - also create once and reuse
         ComputeBuffer countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
@@ -105,18 +113,19 @@ public class MarchingCubesRenderer : MonoBehaviour
 
         // read data back
         Triangle[] trianglesArray = new Triangle[countArray[0]];
-        trianglesBuffer.GetData(trianglesArray);
+        trianglesBuffer.GetData(trianglesArray, 0,0, countArray[0]);
 
         // don't dispose every frame - what it do, when can release?
         countBuffer.Release();
         trianglesBuffer.Release();
         scalarFieldBuffer.Release();
 
-        foreach (Triangle t in trianglesArray)
-        {
-            if (t.a == t.b)
-            Debug.Log(t.a + " " + t.b + " " + t.c);
-        }
+        //for (int i = 0; i < trianglesArray.Length; i++)
+        //{
+        //    Debug.Log(trianglesArray[i].a + " " + trianglesArray[i].b + " " + trianglesArray[i].c);
+        //}
+        // for debug
+        //return;
 
         // Create the mesh
         Vector3[] vertices = new Vector3[trianglesArray.Length * 3];
