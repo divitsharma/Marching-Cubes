@@ -30,8 +30,8 @@ public class ScalarField : MonoBehaviour
     // To handle surfaceLevel slider changes.
     public void OnValidate()
     {
-        GenerateValues(this.gridScale);
-        Notify(this);
+        GenerateValues();
+        //Notify(this);
     }
 #endif
 
