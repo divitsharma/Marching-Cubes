@@ -15,7 +15,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         [SerializeField] private MouseLook m_MouseLook;
 
         private Camera m_Camera;
-        private bool m_Jump;
+        private int m_Jump;
         private float m_YRotation;
         private Vector2 m_Input;
         private Vector3 m_MoveDir = Vector3.zero;
@@ -40,22 +40,22 @@ namespace UnityStandardAssets.Characters.FirstPerson
         {
             RotateView();
             // the jump state needs to read here to make sure it is not missed
-            if (!m_Jump)
-            {
-                m_Jump = Input.GetButtonDown("Jump");
-            }
+            //if (!m_Jump)
+            //{
+            //    m_Jump = Input.GetButtonDown("Jump");
+            //}
 
-            if (!m_PreviouslyGrounded && m_CharacterController.isGrounded)
-            {
-                m_MoveDir.y = 0f;
-                m_Jumping = false;
-            }
-            if (!m_CharacterController.isGrounded && !m_Jumping && m_PreviouslyGrounded)
-            {
-                m_MoveDir.y = 0f;
-            }
+            //if (!m_PreviouslyGrounded && m_CharacterController.isGrounded)
+            //{
+            //    m_MoveDir.y = 0f;
+            //    m_Jumping = false;
+            //}
+            //if (!m_CharacterController.isGrounded && !m_Jumping && m_PreviouslyGrounded)
+            //{
+            //    m_MoveDir.y = 0f;
+            //}
 
-            m_PreviouslyGrounded = m_CharacterController.isGrounded;
+            //m_PreviouslyGrounded = m_CharacterController.isGrounded;
         }
 
 
@@ -63,7 +63,9 @@ namespace UnityStandardAssets.Characters.FirstPerson
         {
             GetInput(out float speed);
             // always move along the camera forward as it is the direction that it being aimed at
-            Vector3 desiredMove = m_Camera.transform.forward*m_Input.y + m_Camera.transform.right*m_Input.x;
+            Vector3 forward = m_Camera.transform.forward;
+            Vector3 desiredMove = new Vector3(forward.x, 0.0f, forward.z)*m_Input.y + m_Camera.transform.right*m_Input.x
+                + Vector3.up*m_Jump;
 
             // Not moving across surface rn
             // get a normal for the surface that is being touched to move along it
@@ -118,6 +120,10 @@ namespace UnityStandardAssets.Characters.FirstPerson
             {
                 m_Input.Normalize();
             }
+
+            if (Input.GetButton("Jump")) m_Jump = 1;
+            else if (Input.GetKey(KeyCode.LeftShift)) m_Jump = -1;
+            else m_Jump = 0;
 
         }
 

@@ -74,7 +74,23 @@ public class MarchingCubesRenderer : MonoBehaviour
     }
 #endif
 
-    void OnScalarFieldChanged(ScalarField s)
+    void Start()
+    {
+        if (meshfilter == null)
+            meshfilter = GetComponent<MeshFilter>();
+        if (scalarField == null)
+            scalarField = FindObjectOfType<ScalarField>();
+
+        if (scalarField != null)
+        {
+            // Don't march cubes on update for now
+            scalarField.AddObserver(OnScalarFieldChanged);
+            // -1 to represent number of cubes
+            //gizmoDrawScale = scalarField.gridScale / (scalarField.Resolution - 1);
+        }
+    }
+
+    public void OnScalarFieldChanged(ScalarField s)
     {
         int nCubesX = scalarField.Length - 1;
         int nCubesY = scalarField.Height - 1;
@@ -100,11 +116,13 @@ public class MarchingCubesRenderer : MonoBehaviour
             ReleaseBuffers();
         }
 
+        //Debug.Log("initing buffers");
         // make new buffer only when scalar field changes
         trianglesBuffer = new ComputeBuffer(MAX_TRIANGLES, sizeof(float) * 3 * 3, ComputeBufferType.Append);
         scalarFieldBuffer = new ComputeBuffer(
             scalarField.Length * scalarField.Width * scalarField.Height, sizeof(float));
         countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
+        //Debug.Log(trianglesBuffer == null);
     }
 
     void ReleaseBuffers()

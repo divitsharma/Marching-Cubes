@@ -21,7 +21,8 @@ public class Brush : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (Input.GetButton("Fire1"))
+        int multiplier = Input.GetButton("Fire1") ? 1 : Input.GetButton("Fire2") ? -1 : 0;
+        if (multiplier != 0)
         {
             // 30 units in front of screen
             Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition + new Vector3(0.0f,0.0f,30.0f));
@@ -50,12 +51,12 @@ public class Brush : MonoBehaviour
                         if (iz < 0 || iz > scalarField.Width) continue;
 
                         float dCenter = Vector3.Magnitude(new Vector3(x, y, z)) / radius;
-                        float increment = Mathf.Max(0f, drawRate * (1f - dCenter));
-                        if (increment < 0)
-                        {
-                            Debug.LogError(drawRate);
-                            Debug.LogError(1f - dCenter);
-                        }
+                        float increment = multiplier * Mathf.Max(0f, drawRate * (1f - dCenter));
+                        //if (increment < 0)
+                        //{
+                        //    Debug.LogError(drawRate);
+                        //    Debug.LogError(1f - dCenter);
+                        //}
                         float newVal = Mathf.Clamp(scalarField.ValueAt(ix, iy, iz) + increment, 0f, 1f);
                         
                         scalarField.SetValue(ix, iy, iz, newVal);
@@ -63,7 +64,7 @@ public class Brush : MonoBehaviour
                 }
             }
 
-            mc.MarchCubes(scalarField);
+            mc.OnScalarFieldChanged(scalarField);
         }
     }
 }
