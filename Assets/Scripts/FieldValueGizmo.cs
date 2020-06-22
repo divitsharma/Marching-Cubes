@@ -17,8 +17,8 @@ public class FieldValueGizmo : MonoBehaviour
     {
         if (scalarField == null)
             scalarField = GameObject.FindObjectOfType<ScalarField>();
-
-        scalarField.SetValue(point, value);
+        if (scalarField != null)
+            scalarField.SetValue(point, value);
         //GetComponent<MeshRenderer>().material.SetColor("_Color", Color.Lerp(Color.black, Color.white, value));
     }
 #endif

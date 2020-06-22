@@ -1,14 +1,19 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿
 
-[CreateAssetMenu(fileName = "ScalarFieldData", menuName = "ScriptableObjects/ScalarFieldData")]
-public class ScalarFieldData : ScriptableObject
+[System.Serializable]
+public class ScalarFieldData
 {
+    [UnityEngine.HideInInspector]
     public float[] values;
 
     public int height;
     public int length;
     public int width;
 
+    public ScalarFieldData(int length, int height, int width)
+    {
+        this.length = length;
+        this.height = height;
+        this.width = width;
+    }
 }

@@ -10,6 +10,7 @@ public class FieldGizmoRenderer : MonoBehaviour
 {
 
     ScalarField scalarField;
+    MarchingCubesRenderer mc;
     public bool hideUnderValued;
 
     public GameObject gizmoPrefab;
@@ -26,10 +27,12 @@ public class FieldGizmoRenderer : MonoBehaviour
     // Don't do everything in edit mode!
     private void OnValidate()
     {
+        if (mc == null)
+            mc = GetComponent<MarchingCubesRenderer>();
         if (scalarField == null)
-            scalarField = GameObject.FindObjectOfType<ScalarField>();
-
-        scalarField.RemoveObserver(UpdateGizmos);
+            scalarField = GetComponent<ScalarField>();
+        if (scalarField != null)
+            scalarField.RemoveObserver(UpdateGizmos);
     }
 #endif
 
@@ -50,7 +53,7 @@ public class FieldGizmoRenderer : MonoBehaviour
                 {
                     float value = scalarField.ValueAt(new Vector3(x, y, z));
 
-                    if (!hideUnderValued || scalarField.ValueAt(x,y,z) > scalarField.GetSurfaceLevel())
+                    if (!hideUnderValued || scalarField.ValueAt(x,y,z) > mc.SurfaceLevel)
                     {
                         Gizmos.color = Color.Lerp(Color.black, Color.white, value);
                         Gizmos.DrawSphere(new Vector3(x, y, z) * gizmoDrawScale, 1f / gizmoDrawScale);
@@ -78,7 +81,7 @@ public class FieldGizmoRenderer : MonoBehaviour
                     // so annoyyyyingnnng
                     FieldValueGizmo gizmo = gizmos[s.ToArrayIndex(x, y, z)].GetComponent<FieldValueGizmo>();
                     gizmo.SetValue(s.ValueAt(x, y, z));
-                    if (hideUnderValued && s.ValueAt(x,y,z) <= s.GetSurfaceLevel())
+                    if (hideUnderValued && s.ValueAt(x,y,z) <= mc.SurfaceLevel)
                     {
                         gizmo.gameObject.SetActive(false);
                     }
@@ -117,7 +120,7 @@ public class FieldGizmoRenderer : MonoBehaviour
                     inst.transform.localScale = Vector3.one * 0.05f;
                     gizmos.Add(inst);
                     // Hide if neeeded
-                    if (hideUnderValued && value <= scalarField.GetSurfaceLevel())
+                    if (hideUnderValued && value <= mc.SurfaceLevel)
                     {
                         inst.SetActive(false);
                     }

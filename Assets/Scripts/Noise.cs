@@ -46,6 +46,10 @@ public class Noise
 
     }
 
+    public float GetValue(Vector3 pos)
+    {
+        return GetValue(pos.x, pos.y, pos.z);
+    }
 
     public float GetValue(float x, float y, float z)
     {

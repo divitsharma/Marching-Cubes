@@ -9,23 +9,48 @@ public class Brush : MonoBehaviour
     [Range(0f, 1f)]
     public float drawRate;
 
+    public GameObject brushHead;
+    GameObject inst;
+
     ScalarField scalarField;
     MarchingCubesRenderer mc;
 
+    [SerializeField] float distanceFromScreen;
+
     void Start()
     {
-        scalarField = GameObject.FindObjectOfType<ScalarField>();
-        mc = GameObject.FindObjectOfType<MarchingCubesRenderer>();
+        scalarField = FindObjectOfType<ScalarField>();
+        mc = FindObjectOfType<MarchingCubesRenderer>();
+        if (scalarField == null) return;
 
+        inst = Instantiate(brushHead, transform, false);
+        // *2 because radius
+        inst.transform.localScale = new Vector3(radius, radius, radius) * 2f * scalarField.GridScale;
+        inst.transform.localPosition = new Vector3(0.0f, 0.0f, distanceFromScreen);
     }
 
     void FixedUpdate()
     {
+        if (scalarField == null) return;
+
         int multiplier = Input.GetButton("Fire1") ? 1 : Input.GetButton("Fire2") ? -1 : 0;
+        if (multiplier == 1)
+        {
+            inst.GetComponent<MeshRenderer>().material.SetColor("Color_FFA3B17A", Color.green);
+        }
+        else if (multiplier == -1)
+        {
+            inst.GetComponent<MeshRenderer>().material.SetColor("Color_FFA3B17A", Color.red);
+        }
+        else
+        {
+            inst.GetComponent<MeshRenderer>().material.SetColor("Color_FFA3B17A", Color.white);
+        }
+
         if (multiplier != 0)
         {
             // 30 units in front of screen
-            Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition + new Vector3(0.0f,0.0f,30.0f));
+            Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition + new Vector3(0.0f,0.0f,distanceFromScreen));
             //Debug.Log(mouseWorld);
 
             // convert world pos to scalarfield index
