@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Collections.Generic;
+using System.Collections;
 
 public class ScalarField : MonoBehaviour
 {
@@ -30,10 +31,13 @@ public class ScalarField : MonoBehaviour
     // To notify observers of grid value or surface level changes.
     event Action<ScalarField> Notify = delegate { };
 
+    bool valuesGenerated = false;
+
 #if UNITY_EDITOR
     // To handle surfaceLevel slider changes.
     public void OnValidate()
     {
+        noise.Init();
         GenerateValues();
         //Notify(this);
     }
@@ -45,7 +49,8 @@ public class ScalarField : MonoBehaviour
         this.gridScale = gridScale;
         this.noise = noise;
         this.noiseOffset = noiseOffset;
-        GenerateValuesAsync();
+
+        //GenerateValuesAsync();
     }
 
 
@@ -54,75 +59,23 @@ public class ScalarField : MonoBehaviour
         noise.Init();
     }
 
-    struct ThreadParam
+
+    public IEnumerator RequestData()
     {
-        public int xstart, xend, ystart, yend, zstart, zend;
-    }
-
-    void GenerateValuesAsync()
-    {
-        noise.Init();
-
-        int height = scalarFieldData.height;
-        int length = scalarFieldData.length;
-        int width = scalarFieldData.width;
-
-        scalarFieldData.values = new float[height * width * length];
-
-        List<Thread> threads = new List<Thread>();
-        int xinc = Mathf.CeilToInt(length / (float)3);
-        int yinc = Mathf.CeilToInt(height / (float)3);
-        int zinc = Mathf.CeilToInt(width / (float)3);
-
-        for (int x = 0; x < length; x += xinc)
+        Thread t = new Thread(new ThreadStart(delegate { GenerateValues(); }));
+        t.Start();
+        while (!valuesGenerated)
         {
-            for (int y = 0; y < height; y+= yinc)
-            {
-                for (int z = 0; z < width; z += zinc)
-                {
-                    Thread t = new Thread(new ParameterizedThreadStart(FillValues));
-                    ThreadParam param;
-                    param.xstart = x;
-                    param.xend = Mathf.Min(x + xinc, length);
-                    param.ystart = y;
-                    param.yend = Mathf.Min(y+yinc, height);
-                    param.zstart = z;
-                    param.zend = Mathf.Min(z + zinc, width);
-                    t.Start(param);
-                    threads.Add(t);
-                }
-            }
+            // this wait value will cause spikes
+            yield return new WaitForSeconds(0.05f);
         }
-
-        foreach (Thread thread in threads)
-        {
-            thread.Join();
-        }
-    }
-
-    void FillValues(object obj)
-    {
-        ThreadParam param = (ThreadParam)obj;
-
-        for (int x = param.xstart; x < param.xend; x++)
-        {
-            if (x >= scalarFieldData.length) return;
-            for (int y = param.ystart; y < param.yend; y++)
-            {
-                if (y >= scalarFieldData.height) return;
-                for (int z = param.zstart; z < param.zend; z++)
-                {
-                    if (z >= scalarFieldData.width) return;
-                    scalarFieldData.values[ToArrayIndex(x, y, z)] = noise.GetValue(new Vector3(x, y, z) + noiseOffset);
-                }
-            }
-        }
+        //Debug.Log("values generated");
     }
 
 
     public void GenerateValues(float valueOverride = -1)
     {
-        noise.Init();
+        //noise.Init();
 
         int height = scalarFieldData.height;
         int length = scalarFieldData.length;
@@ -140,7 +93,7 @@ public class ScalarField : MonoBehaviour
                 }
             }
         }
-
+        valuesGenerated = true;
         Notify?.Invoke(this);
     }
 

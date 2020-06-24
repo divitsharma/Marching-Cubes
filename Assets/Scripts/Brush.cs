@@ -14,14 +14,16 @@ public class Brush : MonoBehaviour
 
     ScalarField scalarField;
     MarchingCubesRenderer mc;
+    EndlessTerrainGenerator terrainGen;
 
     [SerializeField] float distanceFromScreen;
 
     void Start()
     {
+        terrainGen = FindObjectOfType<EndlessTerrainGenerator>();
         scalarField = FindObjectOfType<ScalarField>();
         mc = FindObjectOfType<MarchingCubesRenderer>();
-        if (scalarField == null) return;
+        //if (scalarField == null) return;
 
         inst = Instantiate(brushHead, transform, false);
         // *2 because radius
@@ -31,7 +33,10 @@ public class Brush : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (scalarField == null) return;
+        if (scalarField == null)
+        {
+            return;
+        }
 
         int multiplier = Input.GetButton("Fire1") ? 1 : Input.GetButton("Fire2") ? -1 : 0;
         if (multiplier == 1)
